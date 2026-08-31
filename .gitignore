@@ -1,15 +1,36 @@
-.idea
-.vscode
-upload
+# ===== Build / runtime artifacts =====
+one-api
+one-api.exe
 *.exe
+/bin/
+bin/
+
+# ===== Runtime database (contains keys/tokens — DO NOT COMMIT) =====
 *.db
-build
 *.db-journal
-logs
-data
-/web/node_modules
-cmd.md
-.env
-/one-api
-temp
+*.sqlite
+*.sqlite3
+
+# ===== Logs =====
+logs/
+*.log
+
+# ===== Frontend build output (rebuilt by Dockerfile in CI) =====
+web/build/
+web/default/build/
+web/berry/build/
+web/air/build/
+
+# ===== Go test artifacts =====
+*.test
+*.out
+coverage*
+
+# ===== OS / editor =====
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ===== Env =====
+.env
