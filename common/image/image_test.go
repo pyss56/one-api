@@ -2,6 +2,8 @@ package image_test
 
 import (
 	"encoding/base64"
+	"flag"
+	"os"
 	"github.com/songquanpeng/one-api/common/client"
 	"image"
 	_ "image/gif"
@@ -46,8 +48,14 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	flag.Parse()
+	if testing.Short() {
+		// 这些图片测试依赖访问外部网络（upload.wikimedia.org），在无外网/CI 环境下会失败，
+		// 因此在 short 模式下整体跳过，避免 CI 因网络受限而报错。
+		os.Exit(0)
+	}
 	client.Init()
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestDecode(t *testing.T) {
