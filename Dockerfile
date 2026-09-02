@@ -32,7 +32,11 @@ ADD go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-COPY --from=builder /web/build ./web/build
+# 前端 npm run build 的产物分别在 /web/default/build、/web/berry/build、/web/air/build，
+# 需汇总到 ./web/build/<theme> 才能被 go:embed web/build/* 正确嵌入（否则前端为空导致白屏）
+COPY --from=builder /web/default/build ./web/build/default
+COPY --from=builder /web/berry/build ./web/build/berry
+COPY --from=builder /web/air/build ./web/build/air
 
 RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -linkmode external -extldflags '-static'" -o one-api
 
