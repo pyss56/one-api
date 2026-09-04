@@ -1,12 +1,15 @@
-FROM --platform=$BUILDPLATFORM node:16 AS builder
+FROM --platform=$BUILDPLATFORM node:24 AS builder
+
+# Node 17+ 默认 OpenSSL 3，react-scripts(webpack) 需要 legacy provider 才能构建
+ENV NODE_OPTIONS=--openssl-legacy-provider
 
 WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
-RUN npm install --prefix /web/default & \
-    npm install --prefix /web/berry & \
-    npm install --prefix /web/air & \
+RUN npm install --legacy-peer-deps --prefix /web/default & \
+    npm install --legacy-peer-deps --prefix /web/berry & \
+    npm install --legacy-peer-deps --prefix /web/air & \
     wait
 
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default & \
