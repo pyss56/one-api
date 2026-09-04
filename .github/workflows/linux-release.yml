@@ -2,12 +2,8 @@ name: Linux Release
 permissions:
   contents: write
 
+# 2026-09-04: 改为仅手动触发，不再随 tag 自动运行（使用 docker 部署，不需要桌面端 Release 自动构建）。
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-      - '!*-alpha*'
-      - '!*-preview*'
   workflow_dispatch:
     inputs:
       name:

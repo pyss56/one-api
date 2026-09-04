@@ -5,7 +5,7 @@ services:
     # 使用本 fork 的镜像（已包含安全修复：root 随机口令 / crypto/rand key / SSRF / Cookie Secure）。
     # 默认拉取 GitHub 容器仓库 ghcr.io/pyss56/one-api:latest；如需切换源，设置环境变量
     # ONEAPI_IMAGE（例如 ONEAPI_IMAGE=docker.io/pyss56/one-api:latest）。
-    image: "${ONEAPI_IMAGE:-ghcr.io/pyss56/one-api:latest}"
+    image: "ghcr.io/pyss56/one-api:latest"
     container_name: one-api
     restart: always
     command: --log-dir /app/logs
