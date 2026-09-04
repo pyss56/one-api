@@ -2,7 +2,10 @@ version: '3.4'
 
 services:
   one-api:
-    image: "${REGISTRY:-docker.io}/justsong/one-api:latest"
+    # 使用本 fork 的镜像（已包含安全修复：root 随机口令 / crypto/rand key / SSRF / Cookie Secure）。
+    # 默认拉取 GitHub 容器仓库 ghcr.io/pyss56/one-api:latest；如需切换源，设置环境变量
+    # ONEAPI_IMAGE（例如 ONEAPI_IMAGE=docker.io/pyss56/one-api:latest）。
+    image: "${ONEAPI_IMAGE:-ghcr.io/pyss56/one-api:latest}"
     container_name: one-api
     restart: always
     command: --log-dir /app/logs
@@ -12,38 +15,54 @@ services:
       - ./data/oneapi:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=oneapi:123456@tcp(db:3306)/one-api  # 修改此行，或注释掉以使用 SQLite 作为数据库
-      - REDIS_CONN_STRING=redis://redis
+      # 默认使用 SQLite，数据持久化到挂载目录 ./data/oneapi/one-api.db
+      - SQLITE_PATH=/data/one-api.db
       - SESSION_SECRET=random_string  # 修改为随机字符串
+      # 首次启动创建 root 用户的密码；不设则随机生成并打印到容器日志（不再使用默认 123456）
+      # - INITIAL_ROOT_PASSWORD=请改成强密码
+      # 仅在 one-api 通过 HTTPS 访问时设为 true（默认 false，由用户自行配置是否启用 https）
+      # - SESSION_SECURE=true
       - TZ=Asia/Shanghai
+      # ===== 多节点 / 生产部署：取消以下注释改用 MySQL + Redis =====
+      # 注意：并发兑换漏洞仅在 MySQL 后端触发，单节点建议保持上方 SQLite。
+      # 启用时务必将所有弱密码（123456 等）改为强密码，并取消文件末尾 db/redis 服务注释。
+      # SQL_DSN=oneapi:STRONG_PASSWORD@tcp(db:3306)/one-api
+      # REDIS_CONN_STRING=redis://redis
 #      - NODE_TYPE=slave  # 多机部署时从节点取消注释该行
 #      - SYNC_FREQUENCY=60  # 需要定期从数据库加载数据时取消注释该行
 #      - FRONTEND_BASE_URL=https://openai.justsong.cn  # 多机部署时从节点取消注释该行
-    depends_on:
-      - redis
-      - db
+    # 默认 SQLite 无需依赖；启用 MySQL/Redis 时取消下面注释
+    # depends_on:
+    #   - redis
+    #   - db
     healthcheck:
       test: [ "CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' | awk -F: '{print $2}'" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  redis:
-    image: "${REGISTRY:-docker.io}/redis:latest"
-    container_name: redis
-    restart: always
-
-  db:
-    image: "${REGISTRY:-docker.io}/mysql:8.2.0"
-    restart: always
-    container_name: mysql
-    volumes:
-      - ./data/mysql:/var/lib/mysql  # 挂载目录，持久化存储
-    ports:
-      - '3306:3306'
-    environment:
-      TZ: Asia/Shanghai   # 设置时区
-      MYSQL_ROOT_PASSWORD: 'OneAPI@justsong' # 设置 root 用户的密码
-      MYSQL_USER: oneapi   # 创建专用用户
-      MYSQL_PASSWORD: '123456'    # 设置专用用户密码
-      MYSQL_DATABASE: one-api   # 自动创建数据库
+# ===== 以下 MySQL / Redis 服务仅在使用 SQL_DSN 时启用 =====
+# 启用步骤：
+#   1) 取消下方 redis / db 服务注释；
+#   2) 取消上方 SQL_DSN / REDIS_CONN_STRING 注释；
+#   3) 取消上方 one-api 服务的 depends_on 注释；
+#   4) 将下方所有 123456 等弱密码改为强密码。
+#  redis:
+#    image: "${REGISTRY:-docker.io}/redis:latest"
+#    container_name: redis
+#    restart: always
+#
+#  db:
+#    image: "${REGISTRY:-docker.io}/mysql:8.2.0"
+#    restart: always
+#    container_name: mysql
+#    volumes:
+#      - ./data/mysql:/var/lib/mysql
+#    ports:
+#      - '3306:3306'
+#    environment:
+#      TZ: Asia/Shanghai
+#      MYSQL_ROOT_PASSWORD: '请改成强密码'
+#      MYSQL_USER: oneapi
+#      MYSQL_PASSWORD: '请改成强密码'
+#      MYSQL_DATABASE: one-api

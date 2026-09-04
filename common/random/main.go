@@ -1,10 +1,10 @@
 package random
 
 import (
+	"crypto/rand"
 	"github.com/google/uuid"
-	"math/rand"
+	"math/big"
 	"strings"
-	"time"
 )
 
 func GetUUID() string {
@@ -16,17 +16,26 @@ func GetUUID() string {
 const keyChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const keyNumbers = "0123456789"
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
+// randString returns a cryptographically secure random string of length n
+// drawn from chars. It fails closed by returning an empty string on error.
+func randString(n int, chars string) string {
+	result := make([]byte, n)
+	max := big.NewInt(int64(len(chars)))
+	for i := range result {
+		idx, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return ""
+		}
+		result[i] = chars[idx.Int64()]
+	}
+	return string(result)
 }
 
 func GenerateKey() string {
-	rand.Seed(time.Now().UnixNano())
-	key := make([]byte, 48)
-	for i := 0; i < 16; i++ {
-		key[i] = keyChars[rand.Intn(len(keyChars))]
-	}
+	prefix := randString(16, keyChars)
 	uuid_ := GetUUID()
+	key := make([]byte, 48)
+	copy(key[:16], prefix)
 	for i := 0; i < 32; i++ {
 		c := uuid_[i]
 		if i%2 == 0 && c >= 'a' && c <= 'z' {
@@ -38,24 +47,21 @@ func GenerateKey() string {
 }
 
 func GetRandomString(length int) string {
-	rand.Seed(time.Now().UnixNano())
-	key := make([]byte, length)
-	for i := 0; i < length; i++ {
-		key[i] = keyChars[rand.Intn(len(keyChars))]
-	}
-	return string(key)
+	return randString(length, keyChars)
 }
 
 func GetRandomNumberString(length int) string {
-	rand.Seed(time.Now().UnixNano())
-	key := make([]byte, length)
-	for i := 0; i < length; i++ {
-		key[i] = keyNumbers[rand.Intn(len(keyNumbers))]
-	}
-	return string(key)
+	return randString(length, keyNumbers)
 }
 
 // RandRange returns a random number between min and max (max is not included)
 func RandRange(min, max int) int {
-	return min + rand.Intn(max-min)
+	if max <= min {
+		return min
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max-min)))
+	if err != nil {
+		return min
+	}
+	return min + int(n.Int64())
 }

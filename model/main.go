@@ -11,7 +11,7 @@ import (
 	"github.com/songquanpeng/one-api/common/random"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"os"
 	"strings"
@@ -25,8 +25,16 @@ func CreateRootAccountIfNeed() error {
 	var user User
 	//if user.Status != util.UserStatusEnabled {
 	if err := DB.First(&user).Error; err != nil {
-		logger.SysLog("no user exists, creating a root user for you: username is root, password is 123456")
-		hashedPassword, err := common.Password2Hash("123456")
+		rootPassword := os.Getenv("INITIAL_ROOT_PASSWORD")
+		if rootPassword == "" {
+			// No hardcoded default password. Generate a strong random one and
+			// print it so the admin can log in, then change it immediately.
+			rootPassword = random.GetRandomString(16)
+			logger.SysLog(fmt.Sprintf("no user exists, a root user has been created. username: root, password: %s (please change it after first login)", rootPassword))
+		} else {
+			logger.SysLog("no user exists, created root user with password from INITIAL_ROOT_PASSWORD")
+		}
+		hashedPassword, err := common.Password2Hash(rootPassword)
 		if err != nil {
 			return err
 		}

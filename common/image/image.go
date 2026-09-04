@@ -3,15 +3,18 @@ package image
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
+	"net"
+	"net/url"
+	"regexp"
+	"strings"
+	"sync"
+
 	"github.com/songquanpeng/one-api/common/client"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"net/http"
-	"regexp"
-	"strings"
-	"sync"
 
 	_ "golang.org/x/image/webp"
 )
@@ -19,7 +22,66 @@ import (
 // Regex to match data URL pattern
 var dataURLPattern = regexp.MustCompile(`data:image/([^;]+);base64,(.*)`)
 
+// isPrivateIP reports whether ip falls into loopback, private, link-local or
+// cloud-metadata ranges that must not be reachable from server-side fetches.
+func isPrivateIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+		return true
+	}
+	if v4 := ip.To4(); v4 != nil {
+		privateRanges := []string{
+			"10.0.0.0/8",
+			"172.16.0.0/12",
+			"192.168.0.0/16",
+			"169.254.0.0/16", // includes 169.254.169.254 (cloud metadata)
+			"100.64.0.0/10",
+			"127.0.0.0/8",
+		}
+		for _, cidr := range privateRanges {
+			_, netCIDR, err := net.ParseCIDR(cidr)
+			if err != nil {
+				continue
+			}
+			if netCIDR.Contains(v4) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isBlockedURL returns true when the URL points to an internal/loopback address
+// that must not be fetched server-side (SSRF protection). It fails closed.
+// No domain name is hard-coded; only IP ranges are blocked.
+func isBlockedURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return true
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return true
+	}
+	host := u.Hostname()
+	if ip := net.ParseIP(host); ip != nil {
+		return isPrivateIP(ip)
+	}
+	// DNS resolution: validate resolved IPs (defense against DNS rebinding).
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return true
+	}
+	for _, ip := range ips {
+		if isPrivateIP(ip) {
+			return true
+		}
+	}
+	return false
+}
+
 func IsImageUrl(url string) (bool, error) {
+	if isBlockedURL(url) {
+		return false, fmt.Errorf("blocked or invalid image URL")
+	}
 	resp, err := client.UserContentRequestHTTPClient.Head(url)
 	if err != nil {
 		return false, err
@@ -61,7 +123,7 @@ func GetImageFromUrl(url string) (mimeType string, data string, err error) {
 	if !isImage {
 		return
 	}
-	resp, err := http.Get(url)
+	resp, err := client.UserContentRequestHTTPClient.Get(url)
 	if err != nil {
 		return
 	}

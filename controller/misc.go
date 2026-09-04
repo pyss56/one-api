@@ -107,10 +107,11 @@ func SendEmailVerification(c *gin.Context) {
 			return
 		}
 	}
+	// Avoid enumerating registered emails: always respond as if the code was sent.
 	if model.IsEmailAlreadyTaken(email) {
 		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "邮箱地址已被占用",
+			"success": true,
+			"message": "",
 		})
 		return
 	}
@@ -151,10 +152,11 @@ func SendPasswordResetEmail(c *gin.Context) {
 		})
 		return
 	}
+	// Avoid enumerating registered emails: always respond as if the reset email was sent.
 	if !model.IsEmailAlreadyTaken(email) {
 		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "该邮箱地址未注册",
+			"success": true,
+			"message": "",
 		})
 		return
 	}

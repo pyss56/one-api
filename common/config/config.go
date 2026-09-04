@@ -26,6 +26,11 @@ var DisplayTokenStatEnabled = true
 
 var SessionSecret = uuid.New().String()
 
+// SessionSecure marks the session cookie with the Secure flag so it is only
+// sent over HTTPS. Enable it (SESSION_SECURE=true) when one-api is served via
+// HTTPS; leave false for plain-HTTP deployments.
+var SessionSecure = strings.ToLower(os.Getenv("SESSION_SECURE")) == "true"
+
 var OptionMap map[string]string
 var OptionMapRWMutex sync.RWMutex
 

@@ -37,6 +37,10 @@ func Distribute() func(c *gin.Context) {
 				abortWithMessage(c, http.StatusBadRequest, "无效的渠道 Id")
 				return
 			}
+			if channel.Group != userGroup {
+				abortWithMessage(c, http.StatusForbidden, "无权使用该渠道")
+				return
+			}
 			if channel.Status != model.ChannelStatusEnabled {
 				abortWithMessage(c, http.StatusForbidden, "该渠道已被禁用")
 				return
