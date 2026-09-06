@@ -112,6 +112,7 @@
       "key_placeholder": "请输入密钥",
       "batch": "批量创建",
       "batch_placeholder": "请输入密钥，一行一个",
+      "auto_ban": "允许自动禁用（余额耗尽、密钥失效等情况发生时自动停用该渠道）",
       "buttons": {
         "cancel": "取消",
         "submit": "提交",
@@ -649,6 +650,8 @@
         "quota_reminder": "额度提醒阈值",
         "quota_reminder_placeholder": "低于此额度时将发送邮件提醒用户",
         "auto_disable": "失败时自动禁用渠道",
+        "auto_disable_keywords": "自动禁用关键字",
+        "auto_disable_keywords_placeholder": "一行一个，当上游返回的错误信息（不区分大小写）包含其中任意一项时，立即禁用该渠道，常用于余额/额度耗尽、密钥失效等不会自愈的错误",
         "auto_enable": "成功时自动启用渠道",
         "buttons": {
           "save": "保存监控设置"

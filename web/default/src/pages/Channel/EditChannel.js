@@ -48,6 +48,7 @@ const EditChannel = () => {
     system_prompt: '',
     models: [],
     groups: ['default'],
+    auto_ban: 1,
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -100,6 +101,10 @@ const EditChannel = () => {
           null,
           2
         );
+      }
+      // 升级前创建的渠道没有该字段，按后端默认值视为开启
+      if (data.auto_ban === null || data.auto_ban === undefined) {
+        data.auto_ban = 1;
       }
       setInputs(data);
       if (data.config !== '') {
@@ -678,6 +683,17 @@ const EditChannel = () => {
                 />
               </Form.Field>
             )}
+            <Form.Checkbox
+              checked={inputs.auto_ban !== 0}
+              label={t('channel.edit.auto_ban')}
+              name='auto_ban'
+              onChange={() => {
+                handleInputChange(null, {
+                  name: 'auto_ban',
+                  value: inputs.auto_ban === 0 ? 1 : 0,
+                });
+              }}
+            />
             <Button onClick={handleCancel}>
               {t('channel.edit.buttons.cancel')}
             </Button>

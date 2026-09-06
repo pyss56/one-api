@@ -112,6 +112,7 @@
       "key_placeholder": "Please enter key",
       "batch": "Batch Create",
       "batch_placeholder": "Please enter keys, one per line",
+      "auto_ban": "Auto ban (disable this channel automatically when the balance runs out, the key becomes invalid, etc.)",
       "buttons": {
         "cancel": "Cancel",
         "submit": "Submit",
@@ -651,6 +652,8 @@
         "quota_reminder": "Quota Reminder Threshold",
         "quota_reminder_placeholder": "Users will receive email reminders when quota falls below this value",
         "auto_disable": "Automatically Disable Channel on Failure",
+        "auto_disable_keywords": "Auto Disable Keywords",
+        "auto_disable_keywords_placeholder": "One per line. If the error message returned by the upstream (case-insensitive) contains any of them, the channel is disabled immediately. Useful for unrecoverable errors such as exhausted balance/quota or invalid key",
         "auto_enable": "Automatically Enable Channel on Success",
         "buttons": {
           "save": "Save Monitor Settings"

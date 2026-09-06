@@ -18,6 +18,7 @@ const OperationSetting = () => {
     QuotaPerUnit: 0,
     AutomaticDisableChannelEnabled: '',
     AutomaticEnableChannelEnabled: '',
+    AutomaticDisableKeywords: '',
     ChannelDisableThreshold: 0,
     LogConsumeEnabled: '',
     DisplayInCurrencyEnabled: '',
@@ -88,6 +89,9 @@ const OperationSetting = () => {
         }
         if (originInputs['QuotaRemindThreshold'] !== inputs.QuotaRemindThreshold) {
           await updateOption('QuotaRemindThreshold', inputs.QuotaRemindThreshold);
+        }
+        if (originInputs['AutomaticDisableKeywords'] !== inputs.AutomaticDisableKeywords) {
+          await updateOption('AutomaticDisableKeywords', inputs.AutomaticDisableKeywords);
         }
         break;
       case 'ratio':
@@ -286,6 +290,17 @@ const OperationSetting = () => {
               label='成功时自动启用渠道'
               name='AutomaticEnableChannelEnabled'
               onChange={handleInputChange}
+            />
+          </Form.Group>
+          <Form.Group widths='equal'>
+            <Form.TextArea
+              label='自动禁用关键字'
+              name='AutomaticDisableKeywords'
+              onChange={handleInputChange}
+              style={{ minHeight: 200, fontFamily: 'JetBrains Mono, Consolas' }}
+              autoComplete='new-password'
+              value={inputs.AutomaticDisableKeywords}
+              placeholder='一行一个，当上游返回的错误信息（不区分大小写）包含其中任意一项时，立即禁用该渠道，常用于余额/额度耗尽、密钥失效等不会自愈的错误'
             />
           </Form.Group>
           <Form.Button onClick={() => {

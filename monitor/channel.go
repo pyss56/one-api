@@ -28,7 +28,12 @@ func notifyRootUser(subject string, content string) {
 }
 
 // DisableChannel disable & notify
+// 渠道可以单独关闭自动禁用（auto_ban = 0），此时即便命中禁用条件也会跳过。
 func DisableChannel(channelId int, channelName string, reason string) {
+	if !model.IsChannelAutoBanEnabled(channelId) {
+		logger.SysLog(fmt.Sprintf("channel #%d is not allowed to be disabled automatically, skipped: %s", channelId, reason))
+		return
+	}
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusAutoDisabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been disabled: %s", channelId, reason))
 	subject := fmt.Sprintf("渠道状态变更提醒")
@@ -45,6 +50,10 @@ func DisableChannel(channelId int, channelName string, reason string) {
 }
 
 func MetricDisableChannel(channelId int, successRate float64) {
+	if !model.IsChannelAutoBanEnabled(channelId) {
+		logger.SysLog(fmt.Sprintf("channel #%d is not allowed to be disabled automatically, skipped: low success rate %.2f", channelId, successRate*100))
+		return
+	}
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusAutoDisabled)
 	logger.SysLog(fmt.Sprintf("channel #%d has been disabled due to low success rate: %.2f", channelId, successRate*100))
 	subject := fmt.Sprintf("渠道状态变更提醒")

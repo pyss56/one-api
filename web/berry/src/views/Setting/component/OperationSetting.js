@@ -34,6 +34,7 @@ const OperationSetting = () => {
     QuotaPerUnit: 0,
     AutomaticDisableChannelEnabled: "",
     AutomaticEnableChannelEnabled: "",
+    AutomaticDisableKeywords: "",
     ChannelDisableThreshold: 0,
     LogConsumeEnabled: "",
     DisplayInCurrencyEnabled: "",
@@ -119,6 +120,15 @@ const OperationSetting = () => {
           await updateOption(
             "QuotaRemindThreshold",
             inputs.QuotaRemindThreshold
+          );
+        }
+        if (
+          originInputs["AutomaticDisableKeywords"] !==
+          inputs.AutomaticDisableKeywords
+        ) {
+          await updateOption(
+            "AutomaticDisableKeywords",
+            inputs.AutomaticDisableKeywords
           );
         }
         break;
@@ -411,6 +421,19 @@ const OperationSetting = () => {
               />
             }
           />
+          <FormControl fullWidth>
+            <TextField
+              multiline
+              id="AutomaticDisableKeywords"
+              label="自动禁用关键字"
+              name="AutomaticDisableKeywords"
+              value={inputs.AutomaticDisableKeywords}
+              onChange={handleInputChange}
+              minRows={6}
+              placeholder="一行一个，当上游返回的错误信息（不区分大小写）包含其中任意一项时，立即禁用该渠道，常用于余额/额度耗尽、密钥失效等不会自愈的错误"
+              disabled={loading}
+            />
+          </FormControl>
           <Button
             variant="contained"
             onClick={() => {

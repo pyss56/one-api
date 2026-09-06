@@ -26,6 +26,7 @@ const OperationSetting = () => {
     QuotaPerUnit: 0,
     AutomaticDisableChannelEnabled: '',
     AutomaticEnableChannelEnabled: '',
+    AutomaticDisableKeywords: '',
     ChannelDisableThreshold: 0,
     LogConsumeEnabled: '',
     DisplayInCurrencyEnabled: '',
@@ -112,6 +113,15 @@ const OperationSetting = () => {
           await updateOption(
             'QuotaRemindThreshold',
             inputs.QuotaRemindThreshold
+          );
+        }
+        if (
+          originInputs['AutomaticDisableKeywords'] !==
+          inputs.AutomaticDisableKeywords
+        ) {
+          await updateOption(
+            'AutomaticDisableKeywords',
+            inputs.AutomaticDisableKeywords
           );
         }
         break;
@@ -351,6 +361,19 @@ const OperationSetting = () => {
               label={t('setting.operation.monitor.auto_enable')}
               name='AutomaticEnableChannelEnabled'
               onChange={handleInputChange}
+            />
+          </Form.Group>
+          <Form.Group widths='equal'>
+            <Form.TextArea
+              label={t('setting.operation.monitor.auto_disable_keywords')}
+              name='AutomaticDisableKeywords'
+              onChange={handleInputChange}
+              style={{ minHeight: 200, fontFamily: 'JetBrains Mono, Consolas' }}
+              autoComplete='new-password'
+              value={inputs.AutomaticDisableKeywords}
+              placeholder={t(
+                'setting.operation.monitor.auto_disable_keywords_placeholder'
+              )}
             />
           </Form.Group>
           <Form.Button

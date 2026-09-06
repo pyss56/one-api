@@ -22,7 +22,8 @@ import {
   Autocomplete,
   FormHelperText,
   Switch,
-  Checkbox
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 
 import { Formik } from 'formik';
@@ -242,6 +243,8 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
       }
 
       data.base_url = data.base_url ?? '';
+      // 升级前创建的渠道没有该字段，按后端默认值视为开启
+      data.auto_ban = data.auto_ban === 0 ? 0 : 1;
       data.is_edit = true;
       initChannel(data.type);
       setInitialInput(data);
@@ -617,6 +620,17 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                   <FormHelperText id="helper-tex-channel-system_prompt-label"> {inputPrompt.system_prompt} </FormHelperText>
                 )}
               </FormControl>
+              <FormControlLabel
+                sx={{ ...theme.typography.otherInput }}
+                label="允许自动禁用（余额耗尽、密钥失效等情况发生时自动停用该渠道）"
+                control={
+                  <Checkbox
+                    checked={values.auto_ban !== 0}
+                    onChange={(event) => setFieldValue('auto_ban', event.target.checked ? 1 : 0)}
+                    name="auto_ban"
+                  />
+                }
+              />
               <DialogActions>
                 <Button onClick={onCancel}>取消</Button>
                 <Button disableElevation disabled={isSubmitting} type="submit" variant="contained" color="primary">

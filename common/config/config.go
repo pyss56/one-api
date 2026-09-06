@@ -105,6 +105,70 @@ var PreConsumedQuota int64 = 500
 var ApproximateTokenEnabled = false
 var RetryTimes = 0
 
+// DefaultAutomaticDisableKeywords 是渠道自动禁用关键字的默认值。
+// 当上游返回的错误信息（转小写后）命中其中任意一项时，渠道会被立即禁用，
+// 而不再等待 ChannelDisableThreshold 累计的失败次数。
+// 参考 New API 的 AutomaticDisableKeywords，并补充了国内服务商常见的余额相关表述。
+var DefaultAutomaticDisableKeywords = []string{
+	"your credit balance is too low",
+	"you exceeded your current quota",
+	"this organization has been disabled",
+	"organization has been restricted",
+	"permission denied",
+	"the security token included in the request is invalid",
+	"operation not allowed",
+	"your account is not authorized",
+	"your access was terminated",
+	"violation of our policies",
+	"insufficient_quota",
+	"insufficient quota",
+	"insufficient balance",
+	"insufficient credits",
+	"billing_hard_limit_reached",
+	"api key not valid",
+	"api key expired",
+	"余额不足",
+	"额度不足",
+	"账户已欠费",
+	"已欠费",
+}
+
+var AutomaticDisableKeywords = DefaultAutomaticDisableKeywords
+var automaticDisableKeywordsRWMutex sync.RWMutex
+
+// GetAutomaticDisableKeywords 返回关键字列表的快照。
+// 后台可随时修改该列表，因此需要加锁以避免请求线程读取时发生数据竞争。
+func GetAutomaticDisableKeywords() []string {
+	automaticDisableKeywordsRWMutex.RLock()
+	defer automaticDisableKeywordsRWMutex.RUnlock()
+	return AutomaticDisableKeywords
+}
+
+// AutomaticDisableKeywordsToString 将关键字列表序列化为换行分隔的字符串，用于持久化与后台展示。
+func AutomaticDisableKeywordsToString() string {
+	automaticDisableKeywordsRWMutex.RLock()
+	defer automaticDisableKeywordsRWMutex.RUnlock()
+	return strings.Join(AutomaticDisableKeywords, "\n")
+}
+
+// AutomaticDisableKeywordsFromString 解析换行分隔的关键字，忽略空白行并统一转为小写。
+// 解析结果为空时保留原有配置，避免后台误清空后彻底失去保护。
+func AutomaticDisableKeywordsFromString(s string) {
+	keywords := make([]string, 0)
+	for _, keyword := range strings.Split(s, "\n") {
+		keyword = strings.ToLower(strings.TrimSpace(keyword))
+		if keyword != "" {
+			keywords = append(keywords, keyword)
+		}
+	}
+	if len(keywords) == 0 {
+		return
+	}
+	automaticDisableKeywordsRWMutex.Lock()
+	defer automaticDisableKeywordsRWMutex.Unlock()
+	AutomaticDisableKeywords = keywords
+}
+
 var RootUserEmail = ""
 
 var IsMasterNode = os.Getenv("NODE_TYPE") != "slave"

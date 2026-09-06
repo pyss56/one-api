@@ -36,6 +36,7 @@ type Channel struct {
 	UsedQuota          int64   `json:"used_quota" gorm:"bigint;default:0"`
 	ModelMapping       *string `json:"model_mapping" gorm:"type:varchar(1024);default:''"`
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
+	AutoBan            *int    `json:"auto_ban" gorm:"default:1"`
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
 }
@@ -102,6 +103,15 @@ func (channel *Channel) GetPriority() int64 {
 		return 0
 	}
 	return *channel.Priority
+}
+
+// GetAutoBan 返回渠道是否允许被自动禁用（余额耗尽、密钥失效等场景）。
+// 升级前创建的渠道该字段为 NULL，此时视为开启，以保持原有行为不变。
+func (channel *Channel) GetAutoBan() bool {
+	if channel.AutoBan == nil {
+		return true
+	}
+	return *channel.AutoBan == 1
 }
 
 func (channel *Channel) GetBaseURL() string {
@@ -185,6 +195,20 @@ func (channel *Channel) LoadConfig() (ChannelConfig, error) {
 		return cfg, err
 	}
 	return cfg, nil
+}
+
+// IsChannelAutoBanEnabled 返回渠道是否允许被自动禁用。
+// 渠道查询失败时默认返回 true，避免因为一次查询异常就丢掉保护能力。
+func IsChannelAutoBanEnabled(channelId int) bool {
+	if channelId == 0 {
+		return true
+	}
+	channel, err := GetChannelById(channelId, false)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("failed to get channel #%d: %s", channelId, err.Error()))
+		return true
+	}
+	return channel.GetAutoBan()
 }
 
 func UpdateChannelStatusById(id int, status int) {

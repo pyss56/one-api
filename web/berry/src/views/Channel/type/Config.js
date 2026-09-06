@@ -8,7 +8,8 @@ const defaultConfig = {
     model_mapping: '',
     models: [],
     groups: ['default'],
-    config: {}
+    config: {},
+    auto_ban: 1
   },
   inputLabel: {
     name: '渠道名称',
