@@ -269,10 +269,16 @@ export const CHANNEL_OPTIONS = {
     value: 12,
     color: 'success'
   },
-  13: {
+  13:   {
     key: 13,
     text: '代理：AIGC2D',
     value: 13,
     color: 'success'
+  },
+  52: {
+    key: 52,
+    text: 'Agens',
+    value: 52,
+    color: 'primary'
   }
 };

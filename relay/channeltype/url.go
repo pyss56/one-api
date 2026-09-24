@@ -54,6 +54,8 @@ var ChannelBaseURLs = []string{
 	"",                                          // 50
 
 	"https://generativelanguage.googleapis.com/v1beta/openai/", // 51
+
+	"", // 52 Agens（OpenAI 兼容，Base URL 由用户配置）
 }
 
 func init() {

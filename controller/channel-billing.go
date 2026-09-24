@@ -322,6 +322,8 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 		return 0, errors.New("尚未实现")
 	case channeltype.Custom:
 		baseURL = channel.GetBaseURL()
+	case channeltype.Agens:
+		baseURL = channel.GetBaseURL()
 	case channeltype.CloseAI:
 		return updateChannelCloseAIBalance(channel)
 	case channeltype.OpenAISB:
