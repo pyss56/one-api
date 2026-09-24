@@ -253,6 +253,7 @@ Behavior:
 + Channels that reach their limit are **skipped** for the current request, and another channel within the same priority tier is used instead. If every channel in the highest priority tier is saturated, the request **degrades** to lower priority tiers.
 + When all candidate channels are saturated, the request receives a `429` response. **No channel is disabled** — channel status is not affected at all.
 + Leaving the limit unset (`0`) keeps the behavior exactly the same as if the feature were turned off.
++ Once "Show Details" is enabled, the channel list shows each channel's "used / limit" request count in real time, refreshed every 10 seconds.
 + It is recommended to also set "Retry Times" in the operation settings to `1~2` (the default is `0`, meaning no retry): the rate limit prevents the problem upfront, retries handle whatever still fails.
 
 Note: counters are kept in process memory, so **each instance counts independently in a multi-machine deployment** — the effective limit is roughly `number of instances × configured value`. Deploy a single instance if you need an exact limit.

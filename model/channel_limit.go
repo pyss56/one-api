@@ -35,6 +35,16 @@ func allowChannelRequest(channel *Channel) bool {
 	return channelRequestLimiter.Request(channelRequestLimitKey(channel.Id), limit, channel.GetRequestLimitDuration())
 }
 
+// GetChannelRequestCount 返回渠道在当前滑动窗口内已使用的请求次数，用于前端展示。
+// 未配置上限的渠道没有计数意义，直接返回 0。
+func GetChannelRequestCount(channel *Channel) int {
+	if channel.GetRequestLimit() <= 0 {
+		return 0
+	}
+	channelRequestLimiter.Init(config.RateLimitKeyExpirationDuration)
+	return channelRequestLimiter.Count(channelRequestLimitKey(channel.Id), channel.GetRequestLimitDuration())
+}
+
 // ReleaseChannelRequest 归还一次已占用但未真正使用的名额。
 // 典型场景是重试时又随机选到刚刚失败的渠道，此时该渠道会被跳过，
 // 若不归还就会白白占掉一个名额。

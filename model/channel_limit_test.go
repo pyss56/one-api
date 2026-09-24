@@ -180,6 +180,41 @@ func TestChannelRequestLimit_Release(t *testing.T) {
 	}
 }
 
+// 计数展示：应反映当前窗口内已使用的次数
+func TestGetChannelRequestCount(t *testing.T) {
+	channel := &Channel{Id: 701, RequestLimit: testIntPtr(3), RequestLimitDuration: testIntPtr(60)}
+	if got := GetChannelRequestCount(channel); got != 0 {
+		t.Fatalf("expected 0 initially, got %d", got)
+	}
+	allowChannelRequest(channel)
+	if got := GetChannelRequestCount(channel); got != 1 {
+		t.Fatalf("expected 1 after one request, got %d", got)
+	}
+	allowChannelRequest(channel)
+	if got := GetChannelRequestCount(channel); got != 2 {
+		t.Fatalf("expected 2 after two requests, got %d", got)
+	}
+	// 未配置上限的渠道没有计数意义
+	unlimited := &Channel{Id: 702, RequestLimit: testIntPtr(0)}
+	allowChannelRequest(unlimited)
+	if got := GetChannelRequestCount(unlimited); got != 0 {
+		t.Fatalf("expected 0 for unlimited channel, got %d", got)
+	}
+}
+
+// 计数展示：窗口过后应归零
+func TestGetChannelRequestCount_WindowExpiry(t *testing.T) {
+	channel := &Channel{Id: 703, RequestLimit: testIntPtr(5), RequestLimitDuration: testIntPtr(1)}
+	allowChannelRequest(channel)
+	if got := GetChannelRequestCount(channel); got != 1 {
+		t.Fatalf("expected 1, got %d", got)
+	}
+	time.Sleep(1100 * time.Millisecond)
+	if got := GetChannelRequestCount(channel); got != 0 {
+		t.Fatalf("expected count to reset after the window elapsed, got %d", got)
+	}
+}
+
 // 并发下必须严格不超发：占用与判定在同一把锁内完成
 func TestAllowChannelRequest_ConcurrentNoOvershoot(t *testing.T) {
 	const limit = 50

@@ -69,6 +69,21 @@ func (l *InMemoryRateLimiter) Request(key string, maxRequestNum int, duration in
 	return true
 }
 
+// Count 返回滑动窗口内当前的请求数量，仅查询、不占用名额。
+func (l *InMemoryRateLimiter) Count(key string, duration int64) int {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	queue, ok := l.store[key]
+	if !ok {
+		return 0
+	}
+	now := time.Now().Unix()
+	for len(*queue) > 0 && now-(*queue)[0] >= duration {
+		*queue = (*queue)[1:]
+	}
+	return len(*queue)
+}
+
 // Release 归还一次已占用的名额，用于「选中了渠道但最终没有使用它」的场景
 // （例如重试时又随机选到刚刚失败的那个渠道）。
 // 队列只用于统计窗口内的数量，因此移除任意一项都能达到归还名额的效果，

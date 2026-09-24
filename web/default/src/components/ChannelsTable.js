@@ -109,6 +109,17 @@ const ChannelsTable = () => {
     return channel;
   };
 
+  // 各渠道当前时间窗口内已使用的请求次数，key 为渠道 ID
+  const [requestCounts, setRequestCounts] = useState({});
+
+  const loadRequestCounts = async () => {
+    const res = await API.get('/api/channel/request_count');
+    const { success, data } = res.data;
+    if (success) {
+      setRequestCounts(data || {});
+    }
+  };
+
   const loadChannels = async (startIdx) => {
     const res = await API.get(`/api/channel/?p=${startIdx}`);
     const { success, message, data } = res.data;
@@ -144,6 +155,7 @@ const ChannelsTable = () => {
   const refresh = async () => {
     setLoading(true);
     await loadChannels(activePage - 1);
+    await loadRequestCounts();
   };
 
   const toggleShowDetail = () => {
@@ -158,6 +170,12 @@ const ChannelsTable = () => {
         showError(reason);
       });
     loadChannelModels().then();
+    loadRequestCounts().catch(() => {});
+    // 计数是实时变化的，定期拉取以便观察窗口内的用量变化
+    const timer = setInterval(() => {
+      loadRequestCounts().catch(() => {});
+    }, 10000);
+    return () => clearInterval(timer);
   }, []);
 
   const manageChannel = async (id, action, idx, value) => {
@@ -506,6 +524,9 @@ const ChannelsTable = () => {
               {t('channel.table.priority')}
             </Table.HeaderCell>
             <Table.HeaderCell hidden={!showDetail}>
+              {t('channel.table.request_count')}
+            </Table.HeaderCell>
+            <Table.HeaderCell hidden={!showDetail}>
               {t('channel.table.test_model')}
             </Table.HeaderCell>
             <Table.HeaderCell>{t('channel.table.actions')}</Table.HeaderCell>
@@ -578,6 +599,13 @@ const ChannelsTable = () => {
                       content={t('channel.table.priority_tip')}
                       basic
                     />
+                  </Table.Cell>
+                  <Table.Cell hidden={!showDetail}>
+                    {channel.request_limit > 0
+                      ? `${requestCounts[String(channel.id)] || 0} / ${
+                          channel.request_limit
+                        }`
+                      : t('channel.table.request_count_unlimited')}
                   </Table.Cell>
                   <Table.Cell hidden={!showDetail}>
                     <Dropdown
@@ -664,7 +692,7 @@ const ChannelsTable = () => {
 
         <Table.Footer>
           <Table.Row>
-            <Table.HeaderCell colSpan={showDetail ? '10' : '8'}>
+            <Table.HeaderCell colSpan={showDetail ? '11' : '8'}>
               <Button size='tiny' as={Link} to='/channel/add' loading={loading}>
                 {t('channel.buttons.add')}
               </Button>

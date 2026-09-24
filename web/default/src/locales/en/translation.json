@@ -50,6 +50,8 @@
       "response_time": "Response Time",
       "balance": "Balance",
       "priority": "Priority",
+      "request_count": "Requests (used/limit)",
+      "request_count_unlimited": "Unlimited",
       "test_model": "Test Model",
       "actions": "Actions",
       "no_name": "None",
