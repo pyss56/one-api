@@ -113,6 +113,10 @@
       "batch": "Batch Create",
       "batch_placeholder": "Please enter keys, one per line",
       "auto_ban": "Auto ban (disable this channel automatically when the balance runs out, the key becomes invalid, etc.)",
+      "request_limit": "Request Limit",
+      "request_limit_placeholder": "Max requests allowed within the time window, 0 means unlimited",
+      "request_limit_duration": "Time Window (seconds)",
+      "request_limit_duration_placeholder": "Length of the time window in seconds, default 60",
       "buttons": {
         "cancel": "Cancel",
         "submit": "Submit",

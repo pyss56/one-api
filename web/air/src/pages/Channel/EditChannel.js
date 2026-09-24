@@ -46,6 +46,8 @@ const EditChannel = (props) => {
         system_prompt: '',
         models: [],
         auto_ban: 1,
+        request_limit: 0,
+        request_limit_duration: 60,
         groups: ['default']
     };
     const [batch, setBatch] = useState(false);
@@ -142,6 +144,13 @@ const EditChannel = (props) => {
             }
             if (data.model_mapping !== '') {
                 data.model_mapping = JSON.stringify(JSON.parse(data.model_mapping), null, 2);
+            }
+            // 升级前创建的渠道没有该字段，按后端默认值填充：0 表示不限制，窗口默认 60 秒
+            if (data.request_limit === null || data.request_limit === undefined) {
+                data.request_limit = 0;
+            }
+            if (data.request_limit_duration === null || data.request_limit_duration === undefined) {
+                data.request_limit_duration = 60;
             }
             setInputs(data);
             if (data.auto_ban === 0) {
@@ -243,6 +252,9 @@ const EditChannel = (props) => {
             return;
         }
         localInputs.auto_ban = autoBan ? 1 : 0;
+        // 输入框可能给出字符串，统一转成数值，避免后端 JSON 绑定失败
+        localInputs.request_limit = parseInt(localInputs.request_limit) || 0;
+        localInputs.request_limit_duration = parseInt(localInputs.request_limit_duration) || 60;
         localInputs.models = localInputs.models.join(',');
         localInputs.group = localInputs.groups.join(',');
         if (isEdit) {
@@ -562,6 +574,32 @@ const EditChannel = (props) => {
                           handleInputChange('openai_organization', value)
                       }}
                       value={inputs.openai_organization}
+                    />
+                    <div style={{ marginTop: 10 }}>
+                        <Typography.Text strong>请求次数上限：</Typography.Text>
+                    </div>
+                    <Input
+                      label='时间窗口内允许的最大请求次数，0 表示不限制'
+                      name='request_limit'
+                      type='number'
+                      placeholder='0 表示不限制'
+                      onChange={value => {
+                          handleInputChange('request_limit', value)
+                      }}
+                      value={inputs.request_limit}
+                    />
+                    <div style={{ marginTop: 10 }}>
+                        <Typography.Text strong>时间窗口（秒）：</Typography.Text>
+                    </div>
+                    <Input
+                      label='统计请求次数的时间窗口长度，单位秒'
+                      name='request_limit_duration'
+                      type='number'
+                      placeholder='默认 60'
+                      onChange={value => {
+                          handleInputChange('request_limit_duration', value)
+                      }}
+                      value={inputs.request_limit_duration}
                     />
                     <div style={{ marginTop: 10, display: 'flex' }}>
                         <Space>

@@ -113,6 +113,10 @@
       "batch": "批量创建",
       "batch_placeholder": "请输入密钥，一行一个",
       "auto_ban": "允许自动禁用（余额耗尽、密钥失效等情况发生时自动停用该渠道）",
+      "request_limit": "请求次数上限",
+      "request_limit_placeholder": "时间窗口内允许的最大请求次数，0 表示不限制",
+      "request_limit_duration": "时间窗口（秒）",
+      "request_limit_duration_placeholder": "统计请求次数的时间窗口长度，单位秒，默认 60",
       "buttons": {
         "cancel": "取消",
         "submit": "提交",

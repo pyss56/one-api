@@ -75,6 +75,8 @@ func Relay(c *gin.Context) {
 		}
 		logger.Infof(ctx, "using channel #%d to retry (remain times %d)", channel.Id, i)
 		if channel.Id == lastFailedChannelId {
+			// 该渠道不会真正被使用，归还选渠道时占用的名额
+			dbmodel.ReleaseChannelRequest(channel)
 			continue
 		}
 		middleware.SetupContextForSelectedChannel(c, channel, originalModel)

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -50,6 +51,10 @@ func Distribute() func(c *gin.Context) {
 			var err error
 			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
+				if errors.Is(err, model.ErrAllChannelsRateLimited) {
+					abortWithMessage(c, http.StatusTooManyRequests, "所有可用渠道均已达到请求频率上限，请稍后再试")
+					return
+				}
 				message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", userGroup, requestModel)
 				if channel != nil {
 					logger.SysError(fmt.Sprintf("渠道不存在：%d", channel.Id))

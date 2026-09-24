@@ -245,6 +245,9 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
       data.base_url = data.base_url ?? '';
       // 升级前创建的渠道没有该字段，按后端默认值视为开启
       data.auto_ban = data.auto_ban === 0 ? 0 : 1;
+      // 升级前创建的渠道没有该字段，按后端默认值填充
+      data.request_limit = data.request_limit ?? 0;
+      data.request_limit_duration = data.request_limit_duration ?? 60;
       data.is_edit = true;
       initChannel(data.type);
       setInitialInput(data);
@@ -619,6 +622,34 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 ) : (
                   <FormHelperText id="helper-tex-channel-system_prompt-label"> {inputPrompt.system_prompt} </FormHelperText>
                 )}
+              </FormControl>
+              <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                <TextField
+                  id="channel-request_limit-label"
+                  label={inputLabel.request_limit}
+                  value={values.request_limit ?? 0}
+                  name="request_limit"
+                  type="number"
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  aria-describedby="helper-text-channel-request_limit-label"
+                  placeholder={inputPrompt.request_limit}
+                />
+                <FormHelperText id="helper-tex-channel-request_limit-label"> {inputPrompt.request_limit} </FormHelperText>
+              </FormControl>
+              <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                <TextField
+                  id="channel-request_limit_duration-label"
+                  label={inputLabel.request_limit_duration}
+                  value={values.request_limit_duration ?? 60}
+                  name="request_limit_duration"
+                  type="number"
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  aria-describedby="helper-text-channel-request_limit_duration-label"
+                  placeholder={inputPrompt.request_limit_duration}
+                />
+                <FormHelperText id="helper-tex-channel-request_limit_duration-label"> {inputPrompt.request_limit_duration} </FormHelperText>
               </FormControl>
               <FormControlLabel
                 sx={{ ...theme.typography.otherInput }}

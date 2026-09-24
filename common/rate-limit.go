@@ -68,3 +68,19 @@ func (l *InMemoryRateLimiter) Request(key string, maxRequestNum int, duration in
 	}
 	return true
 }
+
+// Release 归还一次已占用的名额，用于「选中了渠道但最终没有使用它」的场景
+// （例如重试时又随机选到刚刚失败的那个渠道）。
+// 队列只用于统计窗口内的数量，因此移除任意一项都能达到归还名额的效果，
+// 这里移除最新的一项，语义上等价于撤销刚刚那次占用。
+func (l *InMemoryRateLimiter) Release(key string) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	queue, ok := l.store[key]
+	if !ok {
+		return
+	}
+	if len(*queue) > 0 {
+		*queue = (*queue)[:len(*queue)-1]
+	}
+}

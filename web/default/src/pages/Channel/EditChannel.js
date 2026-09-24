@@ -49,6 +49,8 @@ const EditChannel = () => {
     models: [],
     groups: ['default'],
     auto_ban: 1,
+    request_limit: 0,
+    request_limit_duration: 60,
   };
   const [batch, setBatch] = useState(false);
   const [inputs, setInputs] = useState(originInputs);
@@ -105,6 +107,16 @@ const EditChannel = () => {
       // 升级前创建的渠道没有该字段，按后端默认值视为开启
       if (data.auto_ban === null || data.auto_ban === undefined) {
         data.auto_ban = 1;
+      }
+      // 升级前创建的渠道没有该字段，按后端默认值填充：0 表示不限制，窗口默认 60 秒
+      if (data.request_limit === null || data.request_limit === undefined) {
+        data.request_limit = 0;
+      }
+      if (
+        data.request_limit_duration === null ||
+        data.request_limit_duration === undefined
+      ) {
+        data.request_limit_duration = 60;
       }
       setInputs(data);
       if (data.config !== '') {
@@ -683,6 +695,28 @@ const EditChannel = () => {
                 />
               </Form.Field>
             )}
+            <Form.Group widths='equal'>
+              <Form.Input
+                label={t('channel.edit.request_limit')}
+                name='request_limit'
+                onChange={handleInputChange}
+                value={inputs.request_limit}
+                type='number'
+                min='0'
+                placeholder={t('channel.edit.request_limit_placeholder')}
+              />
+              <Form.Input
+                label={t('channel.edit.request_limit_duration')}
+                name='request_limit_duration'
+                onChange={handleInputChange}
+                value={inputs.request_limit_duration}
+                type='number'
+                min='1'
+                placeholder={t(
+                  'channel.edit.request_limit_duration_placeholder'
+                )}
+              />
+            </Form.Group>
             <Form.Checkbox
               checked={inputs.auto_ban !== 0}
               label={t('channel.edit.auto_ban')}

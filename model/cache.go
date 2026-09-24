@@ -8,8 +8,6 @@ import (
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/common/random"
-	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -234,22 +232,7 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 	if len(channels) == 0 {
 		return nil, errors.New("channel not found")
 	}
-	endIdx := len(channels)
-	// choose by priority
-	firstChannel := channels[0]
-	if firstChannel.GetPriority() > 0 {
-		for i := range channels {
-			if channels[i].GetPriority() != firstChannel.GetPriority() {
-				endIdx = i
-				break
-			}
-		}
-	}
-	idx := rand.Intn(endIdx)
-	if ignoreFirstPriority {
-		if endIdx < len(channels) { // which means there are more than one priority
-			idx = random.RandRange(endIdx, len(channels))
-		}
-	}
-	return channels[idx], nil
+	// channels 已在 InitChannelCache 中按优先级降序排列，
+	// 选择逻辑（含请求频率限制）统一交给 selectSatisfiedChannel 处理。
+	return selectSatisfiedChannel(channels, ignoreFirstPriority)
 }

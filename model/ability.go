@@ -2,10 +2,9 @@ package model
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strings"
-
-	"gorm.io/gorm"
 
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/utils"
@@ -19,8 +18,10 @@ type Ability struct {
 	Priority  *int64 `json:"priority" gorm:"bigint;default:0;index"`
 }
 
+// GetRandomSatisfiedChannel 在数据库直连（未开启内存缓存）时挑选可用渠道。
+// 这里一次性取出全部候选而不是只取一条，是为了让优先级分档与请求频率限制
+// 都能复用 selectSatisfiedChannel，与内存缓存路径保持完全一致的行为。
 func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
-	ability := Ability{}
 	groupCol := "`group`"
 	trueVal := "1"
 	if common.UsingPostgreSQL {
@@ -28,26 +29,27 @@ func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority b
 		trueVal = "true"
 	}
 
-	var err error = nil
-	var channelQuery *gorm.DB
-	if ignoreFirstPriority {
-		channelQuery = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model)
-	} else {
-		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model)
-		channelQuery = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal+" and priority = (?)", group, model, maxPrioritySubQuery)
-	}
-	if common.UsingSQLite || common.UsingPostgreSQL {
-		err = channelQuery.Order("RANDOM()").First(&ability).Error
-	} else {
-		err = channelQuery.Order("RAND()").First(&ability).Error
-	}
+	var abilities []Ability
+	err := DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model).Find(&abilities).Error
 	if err != nil {
 		return nil, err
 	}
-	channel := Channel{}
-	channel.Id = ability.ChannelId
-	err = DB.First(&channel, "id = ?", ability.ChannelId).Error
-	return &channel, err
+	if len(abilities) == 0 {
+		return nil, errors.New("channel not found")
+	}
+	channelIds := make([]int, 0, len(abilities))
+	for _, ability := range abilities {
+		channelIds = append(channelIds, ability.ChannelId)
+	}
+	var channels []*Channel
+	err = DB.Where("id IN ?", channelIds).Find(&channels).Error
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(channels, func(i, j int) bool {
+		return channels[i].GetPriority() > channels[j].GetPriority()
+	})
+	return selectSatisfiedChannel(channels, ignoreFirstPriority)
 }
 
 func (channel *Channel) AddAbilities() error {

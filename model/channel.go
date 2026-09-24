@@ -37,8 +37,14 @@ type Channel struct {
 	ModelMapping       *string `json:"model_mapping" gorm:"type:varchar(1024);default:''"`
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	AutoBan            *int    `json:"auto_ban" gorm:"default:1"`
-	Config             string  `json:"config"`
-	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
+	// RequestLimit 与 RequestLimitDuration 共同描述渠道的请求频率上限：
+	// 在 RequestLimitDuration 秒的滑动窗口内最多允许 RequestLimit 次请求。
+	// RequestLimit 为 0 表示不限制。拆成两个字段是为了后续扩展到
+	// 「每小时 N 次」「每天 N 次」等其他窗口，而无需再改表结构。
+	RequestLimit         *int    `json:"request_limit" gorm:"default:0"`
+	RequestLimitDuration *int    `json:"request_limit_duration" gorm:"default:60"`
+	Config               string  `json:"config"`
+	SystemPrompt         *string `json:"system_prompt" gorm:"type:text"`
 }
 
 type ChannelConfig struct {
@@ -112,6 +118,22 @@ func (channel *Channel) GetAutoBan() bool {
 		return true
 	}
 	return *channel.AutoBan == 1
+}
+
+// GetRequestLimit 返回滑动窗口内允许的最大请求次数，0 表示不限制。
+func (channel *Channel) GetRequestLimit() int {
+	if channel.RequestLimit == nil {
+		return 0
+	}
+	return *channel.RequestLimit
+}
+
+// GetRequestLimitDuration 返回滑动窗口长度（秒），非法值回退为 60 秒。
+func (channel *Channel) GetRequestLimitDuration() int64 {
+	if channel.RequestLimitDuration == nil || *channel.RequestLimitDuration <= 0 {
+		return 60
+	}
+	return int64(*channel.RequestLimitDuration)
 }
 
 func (channel *Channel) GetBaseURL() string {
