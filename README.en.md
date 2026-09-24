@@ -84,6 +84,8 @@ _✨ Access all LLM through the standard OpenAI API format, easy to deploy & use
     + [GitHub OAuth](https://github.com/settings/applications/new).
     + WeChat Official Account authorization (requires additional deployment of [WeChat Server](https://github.com/songquanpeng/wechat-server)).
 18. Immediate support and encapsulation of other major model APIs as they become available.
+19. Supports **per-channel request rate limiting**: a maximum number of requests within a time window can be configured for each channel, and channels that hit the limit are skipped automatically. [See here](#channel-request-rate-limit).
+20. Supports **automatic channel disabling** with customizable keywords, so a channel is disabled immediately when specific upstream errors occur (balance exhausted, invalid key, etc.). Auto-disabling can also be turned off per channel.
 
 ## Deployment
 ### Docker Deployment
@@ -233,6 +235,27 @@ To specify which channel to use for the current request, you can add the channel
 Note that the token needs to be created by an administrator to specify the channel ID.
 
 If the channel ID is not provided, load balancing will be used to distribute the requests to multiple channels.
+
+### Channel Request Rate Limit
+
+A request rate limit can be configured for each channel to avoid exhausting the upstream quota and getting `429` responses. Two fields are available on the channel edit page:
+
+| Field | Default | Description |
+| --- | --- | --- |
+| Request Limit | `0` | Maximum number of requests allowed within the time window. **`0` means unlimited** |
+| Time Window (seconds) | `60` | Length of the time window used to count requests |
+
+Filling in only "Request Limit" gives you a typical RPM limit; changing the time window to `3600` turns it into "N requests per hour" — no extra field needed.
+
+Behavior:
+
++ A **sliding window** is used (the limit is never exceeded within any continuous window), rather than a fixed window that resets on the clock. Upstream providers generally apply sliding windows; a fixed window would let through twice the configured amount at the window boundary and still trigger `429`.
++ Channels that reach their limit are **skipped** for the current request, and another channel within the same priority tier is used instead. If every channel in the highest priority tier is saturated, the request **degrades** to lower priority tiers.
++ When all candidate channels are saturated, the request receives a `429` response. **No channel is disabled** — channel status is not affected at all.
++ Leaving the limit unset (`0`) keeps the behavior exactly the same as if the feature were turned off.
++ It is recommended to also set "Retry Times" in the operation settings to `1~2` (the default is `0`, meaning no retry): the rate limit prevents the problem upfront, retries handle whatever still fails.
+
+Note: counters are kept in process memory, so **each instance counts independently in a multi-machine deployment** — the effective limit is roughly `number of instances × configured value`. Deploy a single instance if you need an exact limit.
 
 ### Environment Variables
 1. `REDIS_CONN_STRING`: When set, Redis will be used as the storage for request rate limiting instead of memory.
