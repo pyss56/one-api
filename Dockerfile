@@ -7,10 +7,9 @@ WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
-RUN npm install --legacy-peer-deps --prefix /web/default & \
-    npm install --legacy-peer-deps --prefix /web/berry & \
-    npm install --legacy-peer-deps --prefix /web/air & \
-    wait
+RUN npm install --legacy-peer-deps --no-audit --no-fund --prefix /web/default && \
+    npm install --legacy-peer-deps --no-audit --no-fund --prefix /web/berry && \
+    npm install --legacy-peer-deps --no-audit --no-fund --prefix /web/air
 
 # default 主题必选（构建失败则整体失败）；berry/air 可选，构建失败仅跳过该主题
 RUN DISABLE_ESLINT_PLUGIN='true' CI='false' TSC_COMPILE_ON_ERROR='true' \
