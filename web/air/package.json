@@ -56,9 +56,5 @@
     "singleQuote": true,
     "jsxSingleQuote": true
   },
-  "proxy": "http://localhost:3000",
-  "overrides": {
-    "ajv": "6.12.3",
-    "ajv-keywords": "3.5.2"
-  }
+  "proxy": "http://localhost:3000"
 }

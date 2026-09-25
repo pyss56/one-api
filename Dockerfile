@@ -7,18 +7,15 @@ WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
-RUN npm install --legacy-peer-deps --no-audit --no-fund --prefix /web/default && \
-    npm install --legacy-peer-deps --no-audit --no-fund --prefix /web/berry && \
-    npm install --legacy-peer-deps --no-audit --no-fund --prefix /web/air
+RUN npm install --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --prefix /web/default & \
+    npm install --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --prefix /web/berry & \
+    npm install --legacy-peer-deps --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --prefix /web/air & \
+    wait
 
-# default 主题必选（构建失败则整体失败）；berry/air 可选，构建失败仅跳过该主题
-RUN DISABLE_ESLINT_PLUGIN='true' CI='false' TSC_COMPILE_ON_ERROR='true' \
-      REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default
-RUN for t in berry air; do \
-      DISABLE_ESLINT_PLUGIN='true' CI='false' TSC_COMPILE_ON_ERROR='true' \
-      REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/$t \
-      || echo "WARN: theme '$t' build failed, skipping"; \
-    done
+RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default & \
+    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry & \
+    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air & \
+    wait
 
 FROM golang:alpine AS builder2
 
@@ -38,8 +35,9 @@ ADD go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# 各主题 build 脚本：react-scripts build && mv -f build ../build/<theme>
-# 产物汇总到 builder 阶段的 /web/build/{default,berry,air}，整体拷入后被 //go:embed web/build/* 嵌入。
+# 前端 npm run build 实际会把产物 mv 到 builder 阶段的 /web/build/{default,berry,air}
+# （见各主题 package.json 的 build 脚本：react-scripts build && mv -f build ../build/<theme>）
+# 需整体复制进来才能被 //go:embed web/build/* 正确嵌入（否则前端为空导致白屏）
 COPY --from=builder /web/build ./web/build
 
 RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -linkmode external -extldflags '-static'" -o one-api

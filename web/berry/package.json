@@ -79,10 +79,6 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "immutable": "^4.3.0",
     "prettier": "^2.8.7",
-    "sass": "^1.53.0",
-  "overrides": {
-    "ajv": "6.12.3",
-    "ajv-keywords": "3.5.2"
-  }
+    "sass": "^1.53.0"
 }
 }
