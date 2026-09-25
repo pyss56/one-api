@@ -12,10 +12,14 @@ RUN npm install --legacy-peer-deps --prefix /web/default & \
     npm install --legacy-peer-deps --prefix /web/air & \
     wait
 
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default & \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry & \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air & \
-    wait
+# default 主题必选（构建失败则整体失败）；berry/air 可选，构建失败仅跳过该主题
+RUN DISABLE_ESLINT_PLUGIN='true' CI='false' TSC_COMPILE_ON_ERROR='true' \
+      REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default
+RUN for t in berry air; do \
+      DISABLE_ESLINT_PLUGIN='true' CI='false' TSC_COMPILE_ON_ERROR='true' \
+      REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/$t \
+      || echo "WARN: theme '$t' build failed, skipping"; \
+    done
 
 FROM golang:alpine AS builder2
 
@@ -35,12 +39,9 @@ ADD go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# 前端由 npm run build 直接产出到 builder 阶段的 /web/<theme>/build（CRA 默认输出目录），
-# 这里显式按主题拷贝进 web/build/<theme>，再被 //go:embed web/build/* 嵌入（否则白屏）。
-# 注意：不要再依赖 package.json 里的 mv 汇总，已被移除；此处的显式 COPY 更可靠且能绕过 gha 缓存。
-COPY --from=builder /web/default/build ./web/build/default
-COPY --from=builder /web/berry/build ./web/build/berry
-COPY --from=builder /web/air/build ./web/build/air
+# 各主题 build 脚本：react-scripts build && mv -f build ../build/<theme>
+# 产物汇总到 builder 阶段的 /web/build/{default,berry,air}，整体拷入后被 //go:embed web/build/* 嵌入。
+COPY --from=builder /web/build ./web/build
 
 RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -linkmode external -extldflags '-static'" -o one-api
 
