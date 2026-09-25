@@ -16,9 +16,18 @@ RUN npm install --legacy-peer-deps --no-audit --no-fund --fetch-retries=5 --fetc
 # 注意 build 脚本末尾的 "mv -f build ../build/<theme>" 实际不生效：这里用 --prefix
 # 调用 npm run，工作目录仍是 WORKDIR /web，脚本里的 ../build 指向 /build（不存在），
 # 所以产物始终留在各主题自己的 /web/<theme>/build 内 —— 下方 COPY 源也必须用这个路径。
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default && \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry && \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air
+# 逐个主题构建并汇报结果。各主题 build 脚本末尾的 mv 行为在不同 npm 版本下不一致，
+# 所以这里不依赖它，也不让单个主题失败中断后续构建；成功的会在日志里打 OK，
+# 失败的会打 BUILD FAILED（并保留 npm 原始报错），最终产物由下面汇总步骤统一校验。
+RUN set -e; \
+    for t in default berry air; do \
+      echo "===== BUILD THEME $t ====="; \
+      if DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/$t; then \
+        echo "===== THEME $t OK ====="; \
+      else \
+        echo "===== THEME $t BUILD FAILED ====="; \
+      fi; \
+    done
 
 # 各主题 package.json 的 build 脚本末尾都有 "mv -f build ../build/<theme>"，但实测它对
 # 每个主题行为不一致：default 的 mv 没生效（产物留在 /web/default/build），而 berry/air
