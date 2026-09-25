@@ -29,17 +29,26 @@ RUN set -e; \
       fi; \
     done
 
-# 各主题 package.json 的 build 脚本末尾都有 "mv -f build ../build/<theme>"，但实测它对
-# 每个主题行为不一致：default 的 mv 没生效（产物留在 /web/default/build），而 berry/air
-# 的 mv 生效了（产物被移到 /web/build/<theme>）。为了不再依赖这个不可靠的 mv，
-# 这里按 index.html 直接定位产物所在目录，统一汇总到 /web/artifacts/<theme>；
-# 任一主题找不到产物就让镜像构建失败，避免出现"构建绿却白屏"。
+# 汇总产物到 /web/artifacts/<theme>。
+# 不能用 find 找 index.html：主题目录下还有一份未被打包的源模板 public/index.html
+# （它天生没有 bundle script），find 很可能先命中它，导致嵌进去的是空壳模板 → 白屏。
+# 所以这里只认两个真实产物位置（build 脚本里的 mv 是否生效决定了是哪一个），
+# 并强制校验 index.html 确实带有打包生成的 script 标签；任一环节不满足就构建失败，
+# 避免再次出现"构建绿却白屏"。
 RUN set -e; \
     for t in default berry air; do \
-      hit=$(find /web/$t -name index.html -not -path '*/node_modules/*' -print -quit); \
-      if [ -z "$hit" ]; then echo "frontend index.html missing for theme $t"; exit 1; fi; \
+      src=""; \
+      for p in /web/$t/build/index.html /web/build/$t/index.html; do \
+        if [ -s "$p" ]; then src=$(dirname "$p"); break; fi; \
+      done; \
+      if [ -z "$src" ]; then echo "ERROR: no build output for theme $t"; exit 1; fi; \
+      if ! grep -q '<script' "$src/index.html"; then \
+        echo "ERROR: theme $t index.html has no bundle script (probably raw public/index.html)"; \
+        cat "$src/index.html"; exit 1; \
+      fi; \
+      echo "theme $t artifacts -> $src"; \
       mkdir -p /web/artifacts/$t; \
-      cp -a "$(dirname "$hit")/." /web/artifacts/$t/; \
+      cp -a "$src/." /web/artifacts/$t/; \
     done
 
 FROM golang:alpine AS builder2
