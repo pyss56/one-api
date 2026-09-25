@@ -18,10 +18,20 @@ RUN npm install --legacy-peer-deps --no-audit --no-fund --fetch-retries=5 --fetc
 # 所以产物始终留在各主题自己的 /web/<theme>/build 内 —— 下方 COPY 源也必须用这个路径。
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default && \
     DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry && \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air && \
-    test -s /web/default/build/index.html && \
-    test -s /web/berry/build/index.html && \
-    test -s /web/air/build/index.html
+    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air
+
+# 各主题 package.json 的 build 脚本末尾都有 "mv -f build ../build/<theme>"，但实测它对
+# 每个主题行为不一致：default 的 mv 没生效（产物留在 /web/default/build），而 berry/air
+# 的 mv 生效了（产物被移到 /web/build/<theme>）。为了不再依赖这个不可靠的 mv，
+# 这里按 index.html 直接定位产物所在目录，统一汇总到 /web/artifacts/<theme>；
+# 任一主题找不到产物就让镜像构建失败，避免出现"构建绿却白屏"。
+RUN set -e; \
+    for t in default berry air; do \
+      hit=$(find /web/$t -name index.html -not -path '*/node_modules/*' -print -quit); \
+      if [ -z "$hit" ]; then echo "frontend index.html missing for theme $t"; exit 1; fi; \
+      mkdir -p /web/artifacts/$t; \
+      cp -a "$(dirname "$hit")/." /web/artifacts/$t/; \
+    done
 
 FROM golang:alpine AS builder2
 
@@ -41,13 +51,13 @@ ADD go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# 产物实际留在各主题的 /web/<theme>/build（mv 不生效，原因见上方注释）。
+# 产物已由 builder 阶段统一汇总到 /web/artifacts/<theme>（不依赖 mv，详见上方注释）。
 # 必须按主题逐个复制：若整块复制 /web/build，那里只有被 git 跟踪的占位 .gitkeep，
 # 嵌进二进制的前端为空就会导致白屏。逐个复制可让任一产物缺失立刻报错，
 # 而不是"构建绿却白屏"。
-COPY --from=builder /web/default/build ./web/build/default
-COPY --from=builder /web/berry/build ./web/build/berry
-COPY --from=builder /web/air/build ./web/build/air
+COPY --from=builder /web/artifacts/default ./web/build/default
+COPY --from=builder /web/artifacts/berry ./web/build/berry
+COPY --from=builder /web/artifacts/air ./web/build/air
 
 # 兜底校验：//go:embed web/build/* 要求这三个目录内确实有产物
 RUN test -s web/build/default/index.html && \
