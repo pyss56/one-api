@@ -55,7 +55,7 @@ var ChannelBaseURLs = []string{
 
 	"https://generativelanguage.googleapis.com/v1beta/openai/", // 51
 
-	"", // 52 Agens（OpenAI 兼容，Base URL 由用户配置）
+	"https://api.agnes-ai.cn/v1", // 52 Agens 国内站（OpenAI 兼容，Base URL 已固定为国内站，无需用户填写）
 }
 
 func init() {

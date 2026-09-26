@@ -277,7 +277,7 @@ export const CHANNEL_OPTIONS = {
   },
   52: {
     key: 52,
-    text: 'Agens',
+    text: 'Agens (国内站)',
     value: 52,
     color: 'primary'
   }

@@ -9,10 +9,10 @@ export const CHANNEL_OPTIONS = [
   },
   {
     key: 52,
-    text: 'Agens',
+    text: 'Agens (国内站)',
     value: 52,
     color: 'blue',
-    description: 'OpenAI 兼容渠道，支持设置 Base URL',
+    description: 'OpenAI 兼容渠道（国内站），Base URL 已固定为：https://api.agnes-ai.cn/v1',
   },
   {key: 14, text: 'Anthropic', value: 14, color: 'black'},
   { key: 33, text: 'AWS', value: 33, color: 'black' },

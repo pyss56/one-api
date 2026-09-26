@@ -372,7 +372,7 @@ const EditChannel = (props) => {
                       )
                     }
                     {
-                      inputs.type === 8 && (
+                      (inputs.type === 8 || inputs.type === 50) && (
                         <>
                             <div style={{ marginTop: 10 }}>
                                 <Typography.Text strong>Base URL：</Typography.Text>
