@@ -225,6 +225,8 @@ const EditChannel = () => {
     localInputs.models = localInputs.models.join(',');
     localInputs.group = localInputs.groups.join(',');
     localInputs.config = JSON.stringify(config);
+    localInputs.request_limit = parseInt(localInputs.request_limit) || 0;
+    localInputs.request_limit_duration = parseInt(localInputs.request_limit_duration) || 60;
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
         ...localInputs,
