@@ -1,40 +1,45 @@
-FROM --platform=$BUILDPLATFORM node:16 AS builder
+FROM --platform=$BUILDPLATFORM node:20 AS builder
 
-# 构建环境说明：此前 a571eab 曾把前端构建镜像升级到 node 24，但实测 node 24 的 npm 会让
-# 三个主题的 react-scripts build 全部失败；而前端 package.json 的依赖自那次升级以来
-# 从未改动（git diff a571eab HEAD -- web/*/package.json 为空），说明问题来自构建环境而非
-# 依赖本身。node 16 是当初 v0.0.1-fix-blank-20260902 能正常产出前端的组合，故回退到它。
-# 注意：node 16 使用 OpenSSL 1.1，不要再加 ENV NODE_OPTIONS=--openssl-legacy-provider，
-# 该选项是 node 17+ 才有、node 16 无法识别。
-
+# 构建环境说明：
+# 1) 必须用 yarn 而不是 npm。npm 的 hoisting 会把这条依赖链解成互斥组合 ——
+#    顶层被 ajv@6 占据，而 ajv-keywords@5 的 peer 要 ajv@8，
+#    于是 react-scripts build 报 MODULE_NOT_FOUND: ajv/dist/compile/codegen。
+#    实测 node16/npm8、node20/npm10、node24 都会解崩，只有 yarn 能给出可用组合。
+#    已提交 yarn.lock 固定版本，避免上游再次漂移。
+# 2) node 版本必须 >=18：node-releases 等依赖已要求 node >= 18，node 16 会直接被拒装。
 WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
-RUN npm install --legacy-peer-deps --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --prefix /web/default && \
-    npm install --legacy-peer-deps --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --prefix /web/berry && \
-    npm install --legacy-peer-deps --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000 --prefix /web/air
+# yarn 按工作目录安装，所以逐个 cd 进主题目录
+RUN cd /web/default && yarn install --non-interactive && \
+    cd /web/berry && yarn install --non-interactive && \
+    cd /web/air && yarn install --non-interactive
 
-# 串行构建三个主题。任一主题失败立即中断，让 npm 的原始报错出现在构建日志里。
-# 此前用并行 & + wait 会吞掉单个主题的失败退出码，导致没有产物却"构建成功"。
-# 各主题 package.json 的 build 脚本末尾有 mv，但这里用 --prefix 调用 npm run，
-# 工作目录仍是 WORKDIR /web，脚本里的 ../build 指向不存在的 /build，所以 mv 不会生效，
-# 产物始终留在各主题自己的 /web/<theme>/build —— 下方 COPY 的源也必须用这个路径。
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/default && \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/berry && \
-    DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ./VERSION) npm run build --prefix /web/air
+# 逐个主题构建，任一失败立即中断，让原始报错出现在构建日志里
+# （此前并行 + wait 会吞掉单个主题的失败退出码，导致没有产物却"构建成功"）
+RUN cd /web/default && DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ../VERSION) yarn build && \
+    cd /web/berry && DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ../VERSION) yarn build && \
+    cd /web/air && DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ../VERSION) yarn build
 
-# 严格校验：产物必须存在，且 index.html 必须带打包生成的 script 标签。
-# 不能拿混在主题目录里的源模板 public/index.html 顶替（它永远存在但没有 bundle，
-# 嵌进去就是没有 JS 的空壳页面 → 白屏）。
+# 统一汇总产物到 /web/artifacts/<theme>。
+# 不能只按路径猜：各主题 build 脚本末尾的 "mv -f build ../build/<theme>" 是否生效
+# 取决于工作目录，实测两种都出现过（留在 /web/<theme>/build 或被移到 /web/build/<theme>），
+# 所以两个候选位置都检查；同时强制校验 index.html 带有打包生成的 script 标签，
+# 避免把未打包的 public/index.html 源模板当成产物（那会嵌出没有 JS 的白屏空壳）。
 RUN set -e; \
     for t in default berry air; do \
-      p=/web/$t/build/index.html; \
-      if [ ! -s "$p" ]; then echo "ERROR: missing frontend build for theme $t at $p"; exit 1; fi; \
-      if ! grep -q '<script' "$p"; then \
-        echo "ERROR: theme $t index.html has no bundle script"; cat "$p"; exit 1; \
+      src=""; \
+      for p in /web/$t/build/index.html /web/build/$t/index.html; do \
+        if [ -s "$p" ]; then src=$(dirname "$p"); break; fi; \
+      done; \
+      if [ -z "$src" ]; then echo "ERROR: no build output for theme $t"; exit 1; fi; \
+      if ! grep -q '<script' "$src/index.html"; then \
+        echo "ERROR: theme $t index.html has no bundle script"; cat "$src/index.html"; exit 1; \
       fi; \
-      echo "theme $t OK -> $p"; \
+      echo "theme $t artifacts -> $src"; \
+      mkdir -p /web/artifacts/$t; \
+      cp -a "$src/." /web/artifacts/$t/; \
     done
 
 FROM golang:alpine AS builder2
@@ -55,11 +60,12 @@ ADD go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-# 产物在各主题自己的 build 目录（mv 不生效，原因见上方注释）。必须按主题逐个复制：
-# 若整块复制 /web/build，那里只有被 git 跟踪的占位 .gitkeep，嵌进去的前端为空就会白屏。
-COPY --from=builder /web/default/build ./web/build/default
-COPY --from=builder /web/berry/build ./web/build/berry
-COPY --from=builder /web/air/build ./web/build/air
+# 产物已由 builder 阶段统一汇总到 /web/artifacts/<theme>。
+# 必须按主题逐个复制：若整块复制 /web/build，那里只有被 git 跟踪的占位 .gitkeep，
+# 嵌进二进制的前端为空就会导致白屏。
+COPY --from=builder /web/artifacts/default ./web/build/default
+COPY --from=builder /web/artifacts/berry ./web/build/berry
+COPY --from=builder /web/artifacts/air ./web/build/air
 
 # 兜底校验：//go:embed web/build/* 要求这三个目录内确实有产物
 RUN test -s web/build/default/index.html && \
