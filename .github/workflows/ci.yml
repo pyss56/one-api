@@ -37,13 +37,14 @@ jobs:
       # main.go 通过 //go:embed web/build/* 嵌入前端，而 web/build/ 已被 .gitignore 忽略，
       # 仓库 checkout 后为空。必须先构建前端，否则 go test ./... 编译 main 包时会因
       # embed 无匹配文件而失败（这正是此前 push 构建失败的原因）。
+      # 前端必须用 yarn 构建：npm 在 node 16/20/24 上都会把 ajv 生态解崩
+      # （顶层 hoist 出 ajv@6，而 ajv-keywords@5 的 peer 要 ajv@8 → build 报 MODULE_NOT_FOUND），
+      # 只有 yarn 能解出可用组合；yarn.lock 已提交以锁定版本，避免 registry 漂移。
       - name: Build Frontend
-        env:
-          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           cd web/default
-          npm install --legacy-peer-deps
-          DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ../../VERSION) npm run build
+          yarn install --non-interactive
+          DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat ../../VERSION) yarn build
 
       # When you execute your unit tests, make sure to use the "-coverprofile" flag to write a
       # coverage profile to a file. You will need the name of the file (e.g. "coverage.txt")
