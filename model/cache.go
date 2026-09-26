@@ -222,9 +222,9 @@ func SyncChannelCache(frequency int) {
 	}
 }
 
-func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
+func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool, allowedChannelIds []int) (*Channel, error) {
 	if !config.MemoryCacheEnabled {
-		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority)
+		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority, allowedChannelIds)
 	}
 	channelSyncLock.RLock()
 	defer channelSyncLock.RUnlock()
@@ -234,5 +234,6 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 	}
 	// channels 已在 InitChannelCache 中按优先级降序排列，
 	// 选择逻辑（含请求频率限制）统一交给 selectSatisfiedChannel 处理。
+	channels = filterChannelsByAllowedIds(channels, allowedChannelIds)
 	return selectSatisfiedChannel(channels, ignoreFirstPriority)
 }
