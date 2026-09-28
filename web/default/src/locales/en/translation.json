@@ -52,6 +52,7 @@
       "priority": "Priority",
       "request_count": "Requests (used/limit)",
       "request_count_unlimited": "Unlimited",
+      "request_window": "Request Window",
       "test_model": "Test Model",
       "actions": "Actions",
       "no_name": "None",

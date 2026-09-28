@@ -52,6 +52,7 @@
       "priority": "优先级",
       "request_count": "请求数（已用/上限）",
       "request_count_unlimited": "不限",
+      "request_window": "请求窗口",
       "test_model": "测试模型",
       "actions": "操作",
       "no_name": "无",

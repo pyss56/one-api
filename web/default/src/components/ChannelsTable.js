@@ -523,8 +523,11 @@ const ChannelsTable = () => {
             >
               {t('channel.table.priority')}
             </Table.HeaderCell>
-            <Table.HeaderCell hidden={!showDetail}>
+            <Table.HeaderCell>
               {t('channel.table.request_count')}
+            </Table.HeaderCell>
+            <Table.HeaderCell>
+              {t('channel.table.request_window')}
             </Table.HeaderCell>
             <Table.HeaderCell hidden={!showDetail}>
               {t('channel.table.test_model')}
@@ -600,12 +603,17 @@ const ChannelsTable = () => {
                       basic
                     />
                   </Table.Cell>
-                  <Table.Cell hidden={!showDetail}>
+                  <Table.Cell>
                     {channel.request_limit > 0
                       ? `${requestCounts[String(channel.id)] || 0} / ${
                           channel.request_limit
                         }`
                       : t('channel.table.request_count_unlimited')}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {channel.request_limit > 0
+                      ? `${channel.request_limit_duration}s`
+                      : '—'}
                   </Table.Cell>
                   <Table.Cell hidden={!showDetail}>
                     <Dropdown
@@ -692,7 +700,7 @@ const ChannelsTable = () => {
 
         <Table.Footer>
           <Table.Row>
-            <Table.HeaderCell colSpan={showDetail ? '11' : '8'}>
+            <Table.HeaderCell colSpan={showDetail ? '12' : '10'}>
               <Button size='tiny' as={Link} to='/channel/add' loading={loading}>
                 {t('channel.buttons.add')}
               </Button>
