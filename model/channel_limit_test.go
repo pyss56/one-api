@@ -38,8 +38,8 @@ func TestGetRequestLimitDefaults(t *testing.T) {
 // 未配置上限的渠道始终可用，且会被随机分发
 func TestSelectSatisfiedChannel_NoLimit(t *testing.T) {
 	channels := []*Channel{
-		{Id: 1, RequestLimit: testIntPtr(0)},
-		{Id: 2, RequestLimit: testIntPtr(0)},
+		{Status: ChannelStatusEnabled, Id: 1, RequestLimit: testIntPtr(0)},
+		{Status: ChannelStatusEnabled, Id: 2, RequestLimit: testIntPtr(0)},
 	}
 	used := make(map[int]bool)
 	for i := 0; i < 50; i++ {
@@ -60,7 +60,7 @@ func TestSelectSatisfiedChannel_NoLimit(t *testing.T) {
 // 单个渠道达到上限后应返回 ErrAllChannelsRateLimited
 func TestSelectSatisfiedChannel_AllLimited(t *testing.T) {
 	channels := []*Channel{
-		{Id: 201, RequestLimit: testIntPtr(2), RequestLimitDuration: testIntPtr(60)},
+		{Status: ChannelStatusEnabled, Id: 201, RequestLimit: testIntPtr(2), RequestLimitDuration: testIntPtr(60)},
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := selectSatisfiedChannel(channels, false); err != nil {
@@ -75,7 +75,7 @@ func TestSelectSatisfiedChannel_AllLimited(t *testing.T) {
 // 选渠道必须立即占用名额，否则并发下会超发
 func TestSelectSatisfiedChannel_ReservesQuota(t *testing.T) {
 	channels := []*Channel{
-		{Id: 202, RequestLimit: testIntPtr(3), RequestLimitDuration: testIntPtr(60)},
+		{Status: ChannelStatusEnabled, Id: 202, RequestLimit: testIntPtr(3), RequestLimitDuration: testIntPtr(60)},
 	}
 	for i := 0; i < 3; i++ {
 		if _, err := selectSatisfiedChannel(channels, false); err != nil {
@@ -90,8 +90,8 @@ func TestSelectSatisfiedChannel_ReservesQuota(t *testing.T) {
 // 超限的渠道应被跳过，请求落到未受限的渠道上（B 方案）
 func TestSelectSatisfiedChannel_SkipLimitedChannel(t *testing.T) {
 	channels := []*Channel{
-		{Id: 301, RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(60)},
-		{Id: 302, RequestLimit: testIntPtr(0)},
+		{Status: ChannelStatusEnabled, Id: 301, RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(60)},
+		{Status: ChannelStatusEnabled, Id: 302, RequestLimit: testIntPtr(0)},
 	}
 	if !allowChannelRequest(channels[0]) {
 		t.Fatal("first request to channel 301 should be allowed")
@@ -111,8 +111,8 @@ func TestSelectSatisfiedChannel_SkipLimitedChannel(t *testing.T) {
 // 优先级分档语义保持不变：优先高档，ignoreFirstPriority 时优先低档
 func TestSelectSatisfiedChannel_PriorityTier(t *testing.T) {
 	channels := []*Channel{
-		{Id: 401, Priority: testInt64Ptr(5), RequestLimit: testIntPtr(0)},
-		{Id: 402, Priority: testInt64Ptr(1), RequestLimit: testIntPtr(0)},
+		{Status: ChannelStatusEnabled, Id: 401, Priority: testInt64Ptr(5), RequestLimit: testIntPtr(0)},
+		{Status: ChannelStatusEnabled, Id: 402, Priority: testInt64Ptr(1), RequestLimit: testIntPtr(0)},
 	}
 	for i := 0; i < 20; i++ {
 		channel, err := selectSatisfiedChannel(channels, false)
@@ -135,8 +135,8 @@ func TestSelectSatisfiedChannel_PriorityTier(t *testing.T) {
 // 高优先级档全部打满时应降级到低优先级档
 func TestSelectSatisfiedChannel_DegradeToLowerTier(t *testing.T) {
 	channels := []*Channel{
-		{Id: 501, Priority: testInt64Ptr(5), RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(60)},
-		{Id: 502, Priority: testInt64Ptr(1), RequestLimit: testIntPtr(0)},
+		{Status: ChannelStatusEnabled, Id: 501, Priority: testInt64Ptr(5), RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(60)},
+		{Status: ChannelStatusEnabled, Id: 502, Priority: testInt64Ptr(1), RequestLimit: testIntPtr(0)},
 	}
 	if _, err := selectSatisfiedChannel(channels, false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -152,7 +152,7 @@ func TestSelectSatisfiedChannel_DegradeToLowerTier(t *testing.T) {
 
 // 滑动窗口：窗口过后计数应当失效，渠道重新可用
 func TestChannelRequestLimit_SlidingWindowExpiry(t *testing.T) {
-	channel := &Channel{Id: 601, RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(1)}
+	channel := &Channel{Status: ChannelStatusEnabled, Id: 601, RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(1)}
 	if !allowChannelRequest(channel) {
 		t.Fatal("first request should be allowed")
 	}
@@ -167,7 +167,7 @@ func TestChannelRequestLimit_SlidingWindowExpiry(t *testing.T) {
 
 // 归还名额：选中但未使用的渠道不应永久占用名额
 func TestChannelRequestLimit_Release(t *testing.T) {
-	channel := &Channel{Id: 801, RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(60)}
+	channel := &Channel{Status: ChannelStatusEnabled, Id: 801, RequestLimit: testIntPtr(1), RequestLimitDuration: testIntPtr(60)}
 	if !allowChannelRequest(channel) {
 		t.Fatal("first request should be allowed")
 	}
@@ -182,7 +182,7 @@ func TestChannelRequestLimit_Release(t *testing.T) {
 
 // 计数展示：应反映当前窗口内已使用的次数
 func TestGetChannelRequestCount(t *testing.T) {
-	channel := &Channel{Id: 701, RequestLimit: testIntPtr(3), RequestLimitDuration: testIntPtr(60)}
+	channel := &Channel{Status: ChannelStatusEnabled, Id: 701, RequestLimit: testIntPtr(3), RequestLimitDuration: testIntPtr(60)}
 	if got := GetChannelRequestCount(channel); got != 0 {
 		t.Fatalf("expected 0 initially, got %d", got)
 	}
@@ -195,7 +195,7 @@ func TestGetChannelRequestCount(t *testing.T) {
 		t.Fatalf("expected 2 after two requests, got %d", got)
 	}
 	// 未配置上限的渠道没有计数意义
-	unlimited := &Channel{Id: 702, RequestLimit: testIntPtr(0)}
+	unlimited := &Channel{Status: ChannelStatusEnabled, Id: 702, RequestLimit: testIntPtr(0)}
 	allowChannelRequest(unlimited)
 	if got := GetChannelRequestCount(unlimited); got != 0 {
 		t.Fatalf("expected 0 for unlimited channel, got %d", got)
@@ -204,7 +204,7 @@ func TestGetChannelRequestCount(t *testing.T) {
 
 // 计数展示：窗口过后应归零
 func TestGetChannelRequestCount_WindowExpiry(t *testing.T) {
-	channel := &Channel{Id: 703, RequestLimit: testIntPtr(5), RequestLimitDuration: testIntPtr(1)}
+	channel := &Channel{Status: ChannelStatusEnabled, Id: 703, RequestLimit: testIntPtr(5), RequestLimitDuration: testIntPtr(1)}
 	allowChannelRequest(channel)
 	if got := GetChannelRequestCount(channel); got != 1 {
 		t.Fatalf("expected 1, got %d", got)
@@ -219,7 +219,7 @@ func TestGetChannelRequestCount_WindowExpiry(t *testing.T) {
 func TestAllowChannelRequest_ConcurrentNoOvershoot(t *testing.T) {
 	const limit = 50
 	const concurrency = 500
-	channel := &Channel{Id: 901, RequestLimit: testIntPtr(limit), RequestLimitDuration: testIntPtr(60)}
+	channel := &Channel{Status: ChannelStatusEnabled, Id: 901, RequestLimit: testIntPtr(limit), RequestLimitDuration: testIntPtr(60)}
 
 	var wg sync.WaitGroup
 	var allowed int64
