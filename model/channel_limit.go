@@ -80,6 +80,16 @@ func pickChannel(channels []*Channel, start, end int) *Channel {
 // selectSatisfiedChannel 是渠道选择的统一入口，内存缓存路径与数据库路径共用，
 // 保证两种部署形态下行为一致。channels 必须已按优先级降序排列。
 func selectSatisfiedChannel(channels []*Channel, ignoreFirstPriority bool) (*Channel, error) {
+	// 防御性过滤：被禁用（非 ChannelStatusEnabled）的渠道绝不应参与分发，
+	// 即使上游内存缓存或 abilities 表因绕过代码直接改库而未同步状态。
+	// 这是「停用渠道不被选中」这一基本原则在选路入口的硬保证。
+	enabledChannels := make([]*Channel, 0, len(channels))
+	for _, ch := range channels {
+		if ch.Status == ChannelStatusEnabled {
+			enabledChannels = append(enabledChannels, ch)
+		}
+	}
+	channels = enabledChannels
 	if len(channels) == 0 {
 		return nil, errors.New("channel not found")
 	}

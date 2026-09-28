@@ -42,7 +42,9 @@ func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority b
 		channelIds = append(channelIds, ability.ChannelId)
 	}
 	var channels []*Channel
-	err = DB.Where("id IN ?", channelIds).Find(&channels).Error
+	// 直接以 channels.status 作为「是否启用」的权威判断，避免 abilities 表
+	// 与 channels 状态不一致（如绕过代码直接改库）时仍选中已禁用渠道。
+	err = DB.Where("id IN ? and status = ?", channelIds, ChannelStatusEnabled).Find(&channels).Error
 	if err != nil {
 		return nil, err
 	}
