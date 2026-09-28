@@ -124,20 +124,4 @@ func selectSatisfiedChannel(channels []*Channel, ignoreFirstPriority bool) (*Cha
 	return channel, nil
 }
 
-// filterChannelsByAllowedIds 按渠道白名单过滤候选渠道；allowed 为空表示不限制。
-func filterChannelsByAllowedIds(channels []*Channel, allowed []int) []*Channel {
-	if len(allowed) == 0 {
-		return channels
-	}
-	set := make(map[int]bool, len(allowed))
-	for _, id := range allowed {
-		set[id] = true
-	}
-	out := make([]*Channel, 0, len(channels))
-	for _, ch := range channels {
-		if set[ch.Id] {
-			out = append(out, ch)
-		}
-	}
-	return out
-}
+

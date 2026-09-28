@@ -21,7 +21,7 @@ type Ability struct {
 // GetRandomSatisfiedChannel 在数据库直连（未开启内存缓存）时挑选可用渠道。
 // 这里一次性取出全部候选而不是只取一条，是为了让优先级分档与请求频率限制
 // 都能复用 selectSatisfiedChannel，与内存缓存路径保持完全一致的行为。
-func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool, allowedChannelIds []int) (*Channel, error) {
+func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
 	groupCol := "`group`"
 	trueVal := "1"
 	if common.UsingPostgreSQL {
@@ -51,7 +51,6 @@ func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority b
 	sort.Slice(channels, func(i, j int) bool {
 		return channels[i].GetPriority() > channels[j].GetPriority()
 	})
-	channels = filterChannelsByAllowedIds(channels, allowedChannelIds)
 	return selectSatisfiedChannel(channels, ignoreFirstPriority)
 }
 

@@ -17,7 +17,6 @@ const (
 	ChannelName       = "channel_name"
 	TokenId           = "token_id"
 	TokenName         = "token_name"
-	ChannelIds        = "channel_ids"
 	BaseURL           = "base_url"
 	AvailableModels   = "available_models"
 	KeyRequestBody    = "key_request_body"

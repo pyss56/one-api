@@ -67,14 +67,8 @@ func Relay(c *gin.Context) {
 		logger.Errorf(ctx, "relay error happen, status code is %d, won't retry in this case", bizErr.StatusCode)
 		retryTimes = 0
 	}
-	var retryAllowedChannelIds []int
-	if v, ok := c.Get(ctxkey.ChannelIds); ok {
-		if s, ok := v.(*string); ok {
-			retryAllowedChannelIds = dbmodel.ParseChannelIds(s)
-		}
-	}
 	for i := retryTimes; i > 0; i-- {
-		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, i != retryTimes, retryAllowedChannelIds)
+		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, i != retryTimes)
 		if err != nil {
 			logger.Errorf(ctx, "CacheGetRandomSatisfiedChannel failed: %+v", err)
 			break

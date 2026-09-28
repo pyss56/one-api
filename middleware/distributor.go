@@ -48,14 +48,8 @@ func Distribute() func(c *gin.Context) {
 			}
 		} else {
 			requestModel = c.GetString(ctxkey.RequestModel)
-			var allowedChannelIds []int
-			if v, ok := c.Get(ctxkey.ChannelIds); ok {
-				if s, ok := v.(*string); ok {
-					allowedChannelIds = model.ParseChannelIds(s)
-				}
-			}
 			var err error
-			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false, allowedChannelIds)
+			channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, requestModel, false)
 			if err != nil {
 				if errors.Is(err, model.ErrAllChannelsRateLimited) {
 					abortWithMessage(c, http.StatusTooManyRequests, "所有可用渠道均已达到请求频率上限，请稍后再试")
